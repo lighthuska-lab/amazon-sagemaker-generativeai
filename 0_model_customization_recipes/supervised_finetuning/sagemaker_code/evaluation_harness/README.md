@@ -77,3 +77,24 @@ Ground truth will be the content field in `ground_truth`.
 If you don't have prediction files precomputed, you'll need to pass in a test dataset.
 
 The `test_dataset` option in the yaml file expects a JSON Lines file in the above format as well.
+
+### Metric selection and offline regression tests
+
+Supported metric names retain their requested order. Unsupported names produce a
+warning and are skipped. `bert` is evaluated separately from MLflow's extra
+metrics. Selection preserves `config.metrics`, so constructing another evaluator
+from the same configuration produces the same selection. Empty or omitted metric
+selections add no extra metrics; MLflow still applies its default evaluator.
+
+From the repository root, with Python 3.11–3.13:
+
+```sh
+python -m unittest discover -s 0_model_customization_recipes/supervised_finetuning/sagemaker_code/evaluation_harness/tests -v
+```
+
+These regression tests mock MLflow, pandas, and BERTScore integrations; they need
+only the Python standard library, no AWS credentials, model downloads, or GPU.
+They verify metric selection and routing, including BERT handling and repeat
+initialization. They do not validate actual metric scores, cloud endpoints, or
+MLflow service compatibility. The scoped CI also runs Ruff lint and formatting
+checks (`ruff==0.17.4`) on the evaluator and tests.
