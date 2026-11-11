@@ -20,7 +20,10 @@ class TrainingQueueManager:
         try:
             return self._batch_client.create_service_environment(**create_se_request)
         except ClientError as error:
-            if error.response["message"] == "Object already exists":
+            if (
+                error.response.get("Error", {}).get("Message", "")
+                == "Object already exists"
+            ):
                 desc_resp = self._batch_client.describe_service_environments(
                     serviceEnvironments=[create_se_request["serviceEnvironmentName"]]
                 )
@@ -33,7 +36,7 @@ class TrainingQueueManager:
                     "serviceEnvironmentArn": se["serviceEnvironmentArn"],
                 }
             print(f"ERROR: {json.dumps(error.response, indent=4)}")
-            raise error
+            raise
 
     def wait_for_se_update(self, se_name, expected_status, expected_state="ENABLED"):
         while True:
@@ -71,7 +74,10 @@ class TrainingQueueManager:
         try:
             return self._batch_client.create_scheduling_policy(**create_sp_request)
         except ClientError as error:
-            if error.response["message"] == "Object already exists":
+            if (
+                error.response.get("Error", {}).get("Message", "")
+                == "Object already exists"
+            ):
                 sp_arn = None
                 sp_name = None
                 list_resp = self._batch_client.list_scheduling_policies()
@@ -83,7 +89,7 @@ class TrainingQueueManager:
                 self._log(f"Scheduling Policy already exists: {sp_arn}")
                 return {"name": sp_name, "arn": sp_arn}
             print(f"ERROR: {json.dumps(error.response, indent=4)}")
-            raise error
+            raise
 
     def delete_scheduling_policy(self, sp_arn):
         self._batch_client.delete_scheduling_policy(arn=sp_arn)
@@ -93,7 +99,10 @@ class TrainingQueueManager:
         try:
             return self._batch_client.create_job_queue(**create_jq_request)
         except ClientError as error:
-            if error.response["message"] == "Object already exists":
+            if (
+                error.response.get("Error", {}).get("Message", "")
+                == "Object already exists"
+            ):
                 desc_resp = self._batch_client.describe_job_queues(
                     jobQueues=[create_jq_request["jobQueueName"]]
                 )
@@ -104,7 +113,7 @@ class TrainingQueueManager:
                     "jobQueueArn": jq["jobQueueArn"],
                 }
             print(f"ERROR: {json.dumps(error.response, indent=4)}")
-            raise error
+            raise
 
     def wait_for_jq_update(self, jq_name, expected_status, expected_state="ENABLED"):
         while True:
@@ -138,7 +147,7 @@ class TrainingQueueManager:
         try:
             return self._batch_client.create_quota_share(**create_qs_request)
         except ClientError as error:
-            if "already exists" in error.response["message"]:
+            if "already exists" in error.response.get("Error", {}).get("Message", ""):
                 qs_name = create_qs_request["quotaShareName"]
                 jq_name = create_qs_request["jobQueue"]
                 desc_resp = self._batch_client.describe_job_queues(jobQueues=[jq_name])
@@ -150,11 +159,29 @@ class TrainingQueueManager:
                     "quotaShareArn": qs_arn,
                 }
             print(f"ERROR: {json.dumps(error.response, indent=4)}")
-            raise error
+            raise
 
     def wait_for_qs_update(self, qs_arn, expected_status, expected_state="ENABLED"):
         while True:
-            try:
+            if expected_status == "DELETED":
+                # DescribeQuotaShare uses ClientException for both missing resources
+                # and other client failures. Only a successful, fully paginated
+                # listing can establish absence without guessing from error text.
+                job_queue, separator, _ = qs_arn.rpartition("/quota-share/")
+                if not separator:
+                    raise ValueError("Expected a quota-share ARN")
+                pages = self._batch_client.get_paginator("list_quota_shares").paginate(
+                    jobQueue=job_queue
+                )
+                exists = any(
+                    share["quotaShareArn"] == qs_arn
+                    for page in pages
+                    for share in page["quotaShares"]
+                )
+                if not exists:
+                    self._log(f"Quota share {qs_arn} has been deleted")
+                    break
+            else:
                 resp = self._batch_client.describe_quota_share(quotaShareArn=qs_arn)
                 if (
                     resp["status"] == expected_status
@@ -165,11 +192,6 @@ class TrainingQueueManager:
                     raise ValueError(
                         f"Something went wrong! {json.dumps(resp, indent=4)}"
                     )
-            except ClientError:
-                if expected_status == "DELETED":
-                    self._log(f"Quota share {qs_arn} has been deleted")
-                    break
-                raise
             time.sleep(5)
 
     def delete_quota_share(self, qs_arn):

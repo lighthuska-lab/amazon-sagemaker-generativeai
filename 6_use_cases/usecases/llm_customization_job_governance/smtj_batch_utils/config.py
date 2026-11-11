@@ -3,7 +3,6 @@ import re
 from dataclasses import dataclass, field
 from typing import List, Optional
 
-import boto3
 import yaml
 
 SHARE_ID_PATTERN = re.compile(r"^[a-zA-Z0-9]+\*?$")
@@ -12,8 +11,6 @@ SERVICE_JOB_TYPE = "SAGEMAKER_TRAINING"
 
 VALID_QUEUE_TYPES = {"fifo", "fair-share", "quota-management"}
 VALID_SHARING_STRATEGIES = {"RESERVE", "LEND", "LEND_AND_BORROW"}
-
-batch_client = boto3.client("batch")
 
 
 @dataclass

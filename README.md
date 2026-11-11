@@ -1,3 +1,6 @@
+> Maintained working copy: [lighthuska-lab/amazon-sagemaker-generativeai](https://github.com/lighthuska-lab/amazon-sagemaker-generativeai).
+> Cloned from [brunopistone/amazon-sagemaker-generativeai](https://github.com/brunopistone/amazon-sagemaker-generativeai), derived from [aws-samples/amazon-sagemaker-generativeai](https://github.com/aws-samples/amazon-sagemaker-generativeai). Original history, authorship, and license notices are preserved.
+
 # Generative AI using Amazon SageMaker
 
 A comprehensive repository showcasing Generative AI workflows on Amazon SageMaker AI. This collection provides end-to-end implementations spanning the complete ML lifecycle, from foundational concepts to enterprise-scale deployments, covering model training, fine-tuning, inference optimization, MLOps automation, distributed training, RAG systems, intelligent agents, and real-world industry applications.
