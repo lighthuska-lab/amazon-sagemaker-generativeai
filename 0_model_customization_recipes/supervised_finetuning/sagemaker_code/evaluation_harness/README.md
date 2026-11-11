@@ -83,7 +83,7 @@ The `test_dataset` option in the yaml file expects a JSON Lines file in the abov
 Supported metric names retain their requested order. Unsupported names produce a
 warning and are skipped. `bert` is evaluated separately from MLflow's extra
 metrics. Selection preserves `config.metrics`, so constructing another evaluator
-from the same configuration produces the same selection. Empty or omitted metric
+from the same configuration produces the same selection. Empty or null metric
 selections add no extra metrics; MLflow still applies its default evaluator.
 
 From the repository root, with Python 3.11–3.13:
