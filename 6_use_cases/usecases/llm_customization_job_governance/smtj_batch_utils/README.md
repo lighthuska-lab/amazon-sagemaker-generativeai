@@ -131,3 +131,26 @@ python3 create_resources.py --clean
 ```
 
 This deletes all quota shares, queues, service environments, and scheduling policies defined in the config, showing progress for each step.
+
+#### Offline regression tests
+
+From the repository root, in a Python 3.11–3.13 virtual environment:
+
+```bash
+python -m pip install 'boto3>=1.42.76,<2' 'PyYAML>=6,<7' 'ruff==0.17.4'
+python -m unittest discover -s 6_use_cases/usecases/llm_customization_job_governance/smtj_batch_utils/tests -v
+ruff check --isolated --select E4,E7,E9,F 6_use_cases/usecases/llm_customization_job_governance/smtj_batch_utils/{config.py,queue_manager.py,tests}
+ruff format --isolated --check 6_use_cases/usecases/llm_customization_job_governance/smtj_batch_utils/{config.py,queue_manager.py,tests}
+```
+
+These tests use mocked clients and require no AWS credentials, region, or resources.
+Configuration parsing also runs without creating an AWS client.
+
+Creation helpers read standard Botocore `Error.Message` responses and preserve
+unexpected `ClientError` exceptions. Quota-share deletion is confirmed by absence
+from a successful, fully paginated `ListQuotaShares` response. The cleanup role
+therefore needs `batch:ListQuotaShares` in addition to its existing permissions.
+Authorization, validation, and server errors are propagated rather than reported
+as successful deletion. Listings can be eventually consistent, so a share still
+present in the list is polled again. Resource waiters currently have no deadline;
+interrupt the command if a transition stalls (tracked in issue #3).
